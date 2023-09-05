@@ -7,7 +7,8 @@ const { parse } = require('node-html-parser');
 const processedImages = new Set();
 
 module.exports = (options) => {
-  const outputDir = 'dist/assets/images'; // Set the output directory
+  const outputDir = options.outputDir || 'dist/assets/images'; // Set the image output directory
+  const inputDir = options.inputDir || 'src/assets/images'; // Set the image input directory
 
   return {
     name: 'vite-plugin-images',
@@ -28,7 +29,7 @@ module.exports = (options) => {
 
           if (src && /\.(jpg|png)$/.test(src)) {
             // Construct the full path to the input image based on /src/assets/images
-            const inputImagePath = path.resolve('src/assets/images', src);
+            const inputImagePath = path.resolve(inputDir, src);
 
             console.log(`Processing image: ${inputImagePath}`);
 
@@ -67,10 +68,19 @@ module.exports = (options) => {
                 console.log(`Image already processed: ${inputImagePath}`);
               }
 
-              // Update the src attribute of the <img> tag.
-              imgTag.setAttribute('src', src); // Use the original src
+              // Calculate the relative path from the HTML file to the new image in /dist/
+              const relativeImagePath = path.relative(path.dirname(indexPath), path.join('/', outputDir, src));
 
-              console.log(`Updated <img> src attribute: ${src}`);
+              // Remove the /dist/ folder from the relative path
+              const cleanRelativeImagePath = relativeImagePath.replace('dist/', '');
+
+              console.log('Updated image src:', cleanRelativeImagePath);
+
+              // Update the src attribute of the <img> tag with the cleaned relative path
+              imgTag.setAttribute('src', cleanRelativeImagePath);
+
+              console.log(`Updated <img> src attribute: ${cleanRelativeImagePath}`);
+              
             } else {
               reject(new Error(`Input file is missing: ${inputImagePath}`));
               return;
