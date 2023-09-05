@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const sharp = require('sharp');
-const { parse } = require('node-html-parser');
+const { parse, HTMLElement } = require('node-html-parser');
 
 // Create a Set to store processed image paths
 const processedImages = new Set();
@@ -49,6 +49,12 @@ module.exports = (options) => {
                 const image = sharp(inputImagePath);
                 const sizes = [320, 640, 1024];
                 const imagePromises = sizes.map(async (size) => {
+                  // Check if the output image is smaller than the size it is set to output
+                  if (image.metadata().width < size || image.metadata().height < size) {
+                    // No processing needed, return the original path
+                    return outputImageCopyPath;
+                  }
+                  // Otherwise resize and output the webp format
                   console.log(`Resizing image to ${size}px: ${inputImagePath}`);
                   const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
                   const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
@@ -61,6 +67,14 @@ module.exports = (options) => {
 
                   await fs.outputFile(outputImagePath, webpBuffer);
                   console.log(`Generated WebP image: ${outputImagePath}`);
+
+                  // Create the html element for <source> for each image
+                  const pictureSource = new HTMLElement('source', {});
+                  pictureSource.setAttribute('srcset', `${outputImagePath} ${size}w`);
+                  pictureSource.setAttribute('type', 'image/webp');
+                  // Add the picture source elements to the img tag
+                  imgTag.appendChild(pictureSource);
+
                 });
 
                 imageProcessingPromises.push(...imagePromises);
@@ -78,8 +92,15 @@ module.exports = (options) => {
 
               // Update the src attribute of the <img> tag with the cleaned relative path
               imgTag.setAttribute('src', cleanRelativeImagePath);
+              
+              // Clone the image and add it as a child of the original image
+              const ogImage = imgTag.clone();
+              imgTag.appendChild(ogImage);
 
-              console.log(`Updated <img> src attribute: ${cleanRelativeImagePath}`);
+              // Set the container image to a picture tag and remove the src attribute
+              imgTag.rawTagName = 'picture';
+              imgTag.removeAttribute('src');
+
               
             } else {
               reject(new Error(`Input file is missing: ${inputImagePath}`));
