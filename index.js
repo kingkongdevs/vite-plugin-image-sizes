@@ -102,6 +102,11 @@ module.exports = (options) => {
               // Clone the image and add it as a child of the original image
               const ogImage = imgTag.clone();
               imgTag.appendChild(ogImage);
+              // If the ogImage does not have an alt attribute, add one
+              const altTag = ogImage.getAttribute('alt');
+              if(!altTag) {
+                ogImage.setAttribute('alt','');
+              }
 
               // Set the container image to a picture tag and remove the src attribute
               imgTag.rawTagName = 'picture';
