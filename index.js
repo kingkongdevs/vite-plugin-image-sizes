@@ -39,6 +39,11 @@ module.exports = (options) => {
                 // Add the input image path to the processed images Set
                 processedImages.add(inputImagePath);
 
+                // Copy the original image to the output directory
+                const outputImageCopyPath = path.resolve(outputDir, src);
+                await fs.copy(inputImagePath, outputImageCopyPath);
+                console.log(`Copied original image to: ${outputImageCopyPath}`);
+
                 // Process the image (resize and convert to webp).
                 const image = sharp(inputImagePath);
                 const sizes = [320, 640, 1024];
