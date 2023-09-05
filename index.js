@@ -108,6 +108,13 @@ module.exports = (options) => {
                 ogImage.setAttribute('alt','');
               }
 
+              const imageMetadata = await sharp(inputImagePath).metadata();
+              const originalWidth = imageMetadata.width || 0;
+              const originalHeight = imageMetadata.height || 0;
+              // Set the ogImage height and width to the natural height and width of the image 
+              ogImage.setAttribute('width', originalWidth);
+              ogImage.setAttribute('height', originalHeight);
+
               // Set the container image to a picture tag and remove the src attribute
               imgTag.rawTagName = 'picture';
               imgTag.removeAttribute('src');
