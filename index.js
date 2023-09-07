@@ -2,6 +2,9 @@ const path = require('path');
 const fs = require('fs-extra');
 const sharp = require('sharp');
 const { parse, HTMLElement } = require('node-html-parser');
+// TODO: probably create a webp version of the original image for the largest size
+// TODO: do something with avif as well
+// TODO: allow for skipping adding the lazyload attribute
 
 // Create a Set to store processed image paths
 const processedImages = new Set();
