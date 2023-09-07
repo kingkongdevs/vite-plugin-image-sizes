@@ -118,46 +118,46 @@ module.exports = (options) => {
                   console.log(`Image already processed: ${inputImagePath}`);
                 }
               }
-
               // Calculate the relative path from the HTML file to the new image in /dist/
               const relativeImagePath = path.relative(path.dirname(indexPath), path.join('/', imgOutputDir, src));
 
               // Remove the /dist/ folder from the relative path
-              const cleanRelativeImagePath = relativeImagePath.replace('dist/', ''); // TODO: replace this with something that doesnt assume your output folder is dist
+              const cleanRelativeImagePath = relativeImagePath.replace('dist/', ''); // TODO: replace this with something that doesn't assume your output folder is 'dist'
 
               console.log('Updated image src:', cleanRelativeImagePath);
 
               // Update the src attribute of the <img> tag with the cleaned relative path
-              if(!imgTag.classList.contains('nolazy')) {
+              if (!imgTag.classList.contains('nolazy')) {
                 imgTag.setAttribute('data-src', cleanRelativeImagePath);
               } else {
                 imgTag.setAttribute('src', cleanRelativeImagePath);
               }
-              
+
               // Clone the image and add it as a child of the original image
               const ogImage = imgTag.clone();
               imgTag.appendChild(ogImage);
-              
+
               // If the ogImage does not have an alt attribute, add one
-              const altTag = ogImage.getAttribute('alt');
-              if(!altTag) {
-                ogImage.setAttribute('alt','');
+              if (!ogImage.getAttribute('alt')) {
+                ogImage.setAttribute('alt', '');
               }
+
+              // Get image metadata
               const imageMetadata = await sharp(inputImagePath).metadata();
               const originalWidth = imageMetadata.width || 0;
               const originalHeight = imageMetadata.height || 0;
-              // Set the ogImage height and width to the natural height and width of the image 
+
+              // Set the ogImage height and width to the natural height and width of the image
               ogImage.setAttribute('width', originalWidth);
               ogImage.setAttribute('height', originalHeight);
-              // If the image tag has the nolazy class, don't add lazyload class, and use src instead of data-src
-              if(!ogImage.classList.contains('nolazy')) {
-                // Add lazyload class to img tag
+
+              // If the image tag has the 'nolazy' class, remove src and add lazyload class
+              if (!ogImage.classList.contains('nolazy')) {
                 ogImage.setAttribute('class', 'lazyload');
                 ogImage.removeAttribute('src');
-              } else {
               }
 
-              // Set the container image to a picture tag and remove the src attribute
+              // Set the container image to a 'picture' tag and remove the src and data-src attributes
               imgTag.rawTagName = 'picture';
               imgTag.removeAttribute('src');
               imgTag.removeAttribute('data-src');
