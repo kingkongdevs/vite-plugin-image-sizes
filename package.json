@@ -1,0 +1,19 @@
+{
+  "name": "vite-plugin-image-sizes",
+  "version": "1.0.0",
+  "description": "Plugin for Vite that compresses and generates alternate sizes for images, and rewrites HTML with the corresponding <picture> tags.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kingkongdevs/vite-plugin-image-sizes.git"
+  },
+  "author": "King Kong Devs",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kingkongdevs/vite-plugin-image-sizes/issues"
+  },
+  "homepage": "https://github.com/kingkongdevs/vite-plugin-image-sizes#readme"
+}

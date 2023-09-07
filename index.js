@@ -11,7 +11,7 @@ const processedImages = new Set();
 
 module.exports = (options) => {
   return {
-    name: 'vite-plugin-images',
+    name: 'vite-plugin-image-sizes',
 
     configResolved(resolvedConfig) {
       // store the resolved config
