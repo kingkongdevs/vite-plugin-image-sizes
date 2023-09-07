@@ -146,7 +146,6 @@ module.exports = (options) => {
               // Set the container image to a picture tag and remove the src attribute
               imgTag.rawTagName = 'picture';
               imgTag.removeAttribute('src');
-              imgTag.removeAttribute('class');
               imgTag.removeAttribute('data-src');
 
             } else {
