@@ -81,7 +81,9 @@ module.exports = (options) => {
 
             // If the image tag has the 'nolazy' class, remove src and add lazyload class
             if (!imgTag.classList.contains('nolazy')) {
-              imgTag.setAttribute('class', 'lazyload');
+              const existingClass = [imgTag.getAttribute('class')];
+              existingClass.push('lazyload');
+              imgTag.setAttribute('class', existingClass.join(' '));
               imgTag.removeAttribute('src');
             }
 
