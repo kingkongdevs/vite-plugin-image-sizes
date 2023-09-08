@@ -5,6 +5,7 @@ const { parse, HTMLElement } = require('node-html-parser');
 // TODO: probably create a webp version of the original image for the largest size
 // TODO: do something with avif as well
 // TODO: allow for skipping adding the lazyload attribute
+// TODO: allow for a no-resize option
 
 // Create a Set to store processed image paths
 const processedImages = new Set();
@@ -23,6 +24,7 @@ module.exports = (options) => {
       const imgInputDir = options.imgInputDir || 'src/assets/images'; // Set the image input directory
       const configCommand = config.command; // build or serve
       const buildDir = config.build.outDir; // ./dist/ by default
+      const sizes = options.sizes || [320, 640, 1024];
       
 
       return new Promise(async (resolve, reject) => {
@@ -94,7 +96,7 @@ module.exports = (options) => {
             // Check if the input image file exists.
             if (fs.existsSync(inputImagePath)) {
               // Process the image if it is build, otherwise just use the original image inside the picture tag
-              if(configCommand === 'build') {
+              if(configCommand === 'build' && !imgTag.hasAttribute('nosizes')) {
               // Check if the image has already been processed
                 if (!processedImages.has(inputImagePath)) {
                   // Add the input image path to the processed images Set
@@ -112,7 +114,6 @@ module.exports = (options) => {
 
                   // Process the image (resize and convert to webp) for sizes smaller than the original
                   const image = sharp(inputImagePath);
-                  const sizes = [320, 640, 1024];
                   // Create an array to store the `srcset` values
                   const srcsetValues = [];
                   const imagePromises = sizes.map(async (size) => {
