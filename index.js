@@ -4,8 +4,9 @@ const sharp = require('sharp');
 const { parse, HTMLElement } = require('node-html-parser');
 // TODO: probably create a webp version of the original image for the largest size
 // TODO: do something with avif as well
-// TODO: allow for skipping adding the lazyload attribute
-// TODO: allow for a no-resize option
+// TODO: add a global that stops lazyloading from being added
+// TODO: generate the source and srcset even if new images arent generated.
+// TODO: <source> elements should appear first in the <picture> with <img> fallback last.
 
 // Create a Set to store processed image paths
 const processedImages = new Set();
