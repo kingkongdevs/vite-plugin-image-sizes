@@ -59,7 +59,12 @@ module.exports = (options) => {
             // Remove the /dist/ folder from the relative path
             const cleanRelativeImagePath = relativeImagePath.replace('dist/', ''); // TODO: replace this with something that doesn't assume your output folder is 'dist'
 
-            console.log('Updated image src:', cleanRelativeImagePath);
+            // console.log("Input Image Path: ", inputImagePath)
+            // console.log("-----------------------------------------")
+            // console.log('Relative Image Path:', relativeImagePath);
+            // console.log("-----------------------------------------")
+            // console.log('Clean Relative Path:', cleanRelativeImagePath);
+            // console.log("-----------------------------------------")
 
             // Update the src attribute of the <img> tag with the cleaned relative path
             if (!imgTag.classList.contains('nolazy')) {
@@ -92,7 +97,7 @@ module.exports = (options) => {
 
 
 
-            console.log(`Processing image: ${inputImagePath}`);
+            // console.log(`Processing image: ${inputImagePath}`);
 
             // Check if the input image file exists.
             if (fs.existsSync(inputImagePath)) {
@@ -111,7 +116,7 @@ module.exports = (options) => {
                   // Copy the original image to the output directory
                   const outputImageCopyPath = path.resolve(imgOutputDir, src);
                   await fs.copy(inputImagePath, outputImageCopyPath);
-                  console.log(`Copied original image to: ${outputImageCopyPath}`);
+                  // console.log(`Copied original image to: ${outputImageCopyPath}`);
 
                   // Process the image (resize and convert to webp) for sizes smaller than the original
                   const image = sharp(inputImagePath);
@@ -125,21 +130,23 @@ module.exports = (options) => {
                         return;
                       }
                       // Otherwise resize and output the webp format
-                      console.log(`Resizing image to ${size}px: ${inputImagePath}`);
+                      // console.log(`Resizing image to ${size}px: ${inputImagePath}`);
                       const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
                       const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
 
+					 
                       // Specify the output directory and file path
-                      const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+                      const outputImagePath = path.join(imgOutputDir, webpFileName);
+					  const cleanRelativeOutputImagePath = outputImagePath.replace('dist/', '');
 
                       // Ensure that parent directories are created if they don't exist.
-                      await fs.ensureDir(path.dirname(outputImagePath));
+                      await fs.ensureDir(path.dirname(cleanRelativeOutputImagePath));
 
-                      await fs.outputFile(outputImagePath, webpBuffer);
-                      console.log(`Generated WebP image: ${outputImagePath}`);
+                      await fs.outputFile(cleanRelativeOutputImagePath, webpBuffer);
+                      // console.log(`Generated WebP image: ${cleanRelativeOutputImagePath}`);
 
-                      srcsetValues.push(`${outputImagePath} ${size}w`);
-                      return `${outputImagePath} ${size}w`;
+                      srcsetValues.push(`${cleanRelativeOutputImagePath} ${size}w`);
+                      return `${cleanRelativeOutputImagePath} ${size}w`;
                     }
                   });
 
@@ -147,7 +154,7 @@ module.exports = (options) => {
                   Promise.all(imagePromises).then((srcsetValues) => {
                     // Filter out empty strings or placeholders
                     srcsetValues = srcsetValues.filter((value) => value !== '');
-
+					 console.log(srcsetValues)
                     // Create the html element for <source> with each image reference in it
                     const pictureSource = new HTMLElement('source', {});
                     if(!imgTag.classList.contains('nolazy')) {
@@ -156,13 +163,14 @@ module.exports = (options) => {
                       pictureSource.setAttribute('srcset', srcsetValues.join(', '));
                     }
                     pictureSource.setAttribute('type', 'image/webp');
+
                     // Add the picture source elements to the img tag
-                    picture.appendChild(pictureSource);
+                    picture.insertAdjacentHTML("afterbegin", pictureSource)
                   });
 
                   imageProcessingPromises.push(...imagePromises);
                 } else {
-                  console.log(`Image already processed: ${inputImagePath}`);
+                  // console.log(`Image already processed: ${inputImagePath}`);
                 }
               }
 
