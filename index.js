@@ -157,7 +157,7 @@ module.exports = (options) => {
                     }
                     pictureSource.setAttribute('type', 'image/webp');
                     // Add the picture source elements to the img tag
-                    picture.appendChild(pictureSource);
+                    picture.insertAdjacentHTML('afterbegin',pictureSource);
                   });
 
                   imageProcessingPromises.push(...imagePromises);
