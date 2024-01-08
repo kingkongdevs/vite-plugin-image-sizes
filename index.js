@@ -21,7 +21,7 @@ module.exports = (options) => {
     },
 
     async transformIndexHtml(html, { path: indexPath, context, filename }) {
-      const imgOutputDir = options.outputDir || 'dist/assets/images'; //  Set the image output directory
+      const imgOutputDir = options.outputDir || 'dist/assets/images'; // Set the image output directory
       const imgOutDir = 'assets/images';
       const imgInputDir = options.imgInputDir || 'src/assets/images'; // Set the image input directory
       const configCommand = config.command; // build or serve
@@ -53,137 +53,141 @@ module.exports = (options) => {
         // Process each <img> tag.
         for (const imgTag of imgTags) {
           const src = imgTag.getAttribute('src');
-                    
-          if (src && /\.(jpg|png)$/.test(src)) {
+          
+          // Skip if it is not a jpg or png
+          if (!src || !/\.(jpg|png)$/.test(src)) {
+            return;
+          }
 
-            // First generate the picture element and rename the file
-            const picture = new HTMLElement('picture',{});
-            imgTag.replaceWith(picture);
-  
-            // Add the original image as a child of the new picture tag
-            picture.appendChild(imgTag);
+          // First generate the picture element and rename the file
+          const picture = new HTMLElement('picture',{});
+          imgTag.replaceWith(picture);
+
+          // Add the original image as a child of the new picture tag
+          picture.appendChild(imgTag);
 
 
-            // Output the src of the image when it gets output relative to the HTML file that is being processed
-            const currentIMGpath = path.join(imgOutputPath, src);
-            const outputImagePath = path.relative(currentHTMLdir, currentIMGpath);
+          // Output the src of the image when it gets output relative to the HTML file that is being processed
+          const currentIMGpath = path.join(imgOutputPath, src);
+          const outputImagePath = path.relative(currentHTMLdir, currentIMGpath);
 
-            // Construct the full path to the input image based on /src/assets/images
-            const inputImagePath = path.resolve(imgInputDir, src);
+          // Construct the full path to the input image based on /src/assets/images
+          const inputImagePath = path.resolve(imgInputDir, src);
 
-            // Update the src attribute of the <img> tag with the cleaned relative path
-            if (!imgTag.classList.contains('nolazy')) {
-              imgTag.setAttribute('data-src', outputImagePath);
-            } else {
-              imgTag.setAttribute('src', outputImagePath);
-            }
+          // Update the src attribute of the <img> tag with the cleaned relative path
+          if (!imgTag.classList.contains('nolazy')) {
+            imgTag.setAttribute('data-src', outputImagePath);
+          } else {
+            imgTag.setAttribute('src', outputImagePath);
+          }
 
-            // If the ogImage does not have an alt attribute, add one
-            if (!imgTag.getAttribute('alt')) {
-              imgTag.setAttribute('alt', '');
-            }
+          // If the ogImage does not have an alt attribute, add one
+          if (!imgTag.getAttribute('alt')) {
+            imgTag.setAttribute('alt', '');
+          }
 
-            // Get image metadata
+          // Get image metadata
+          const imageMetadata = await sharp(inputImagePath).metadata();
+          const originalWidth = imageMetadata.width || 0;
+          const originalHeight = imageMetadata.height || 0;
+
+          // Set the imgTag height and width to the natural height and width of the image
+          imgTag.setAttribute('width', originalWidth);
+          imgTag.setAttribute('height', originalHeight);
+
+          // If the image tag has the 'nolazy' class, remove src and add lazyload class
+          if (!imgTag.classList.contains('nolazy')) {
+            const existingClass = [imgTag.getAttribute('class')];
+            existingClass.push('lazyload');
+            imgTag.setAttribute('class', existingClass.join(' '));
+            imgTag.removeAttribute('src');
+          }
+
+
+
+          console.log(`Processing image: ${inputImagePath}`);
+
+          // Check if the input image file exists.
+          if (!fs.existsSync(inputImagePath)) {
+            reject(new Error(`Input file is missing: ${inputImagePath}`));
+            return;
+          }
+
+          // Process the image if it is build, otherwise just use the original image inside the picture tag
+          if(!configCommand === 'build' && imgTag.hasAttribute('nosizes')) {
+            return
+          }
+          
+          // Check if the image has already been processed
+          if (!processedImages.has(inputImagePath)) {
+            // Add the input image path to the processed images Set
+            processedImages.add(inputImagePath);
+
+            // Get the dimensions of the original image
             const imageMetadata = await sharp(inputImagePath).metadata();
             const originalWidth = imageMetadata.width || 0;
             const originalHeight = imageMetadata.height || 0;
 
-            // Set the imgTag height and width to the natural height and width of the image
-            imgTag.setAttribute('width', originalWidth);
-            imgTag.setAttribute('height', originalHeight);
+            // Copy the original image to the output directory
+            const outputImageCopyPath = path.resolve(imgOutputDir, src);
+            await fs.copy(inputImagePath, outputImageCopyPath);
+            console.log(`Copied original image to: ${outputImageCopyPath}`);
 
-            // If the image tag has the 'nolazy' class, remove src and add lazyload class
-            if (!imgTag.classList.contains('nolazy')) {
-              const existingClass = [imgTag.getAttribute('class')];
-              existingClass.push('lazyload');
-              imgTag.setAttribute('class', existingClass.join(' '));
-              imgTag.removeAttribute('src');
-            }
-
-
-
-            console.log(`Processing image: ${inputImagePath}`);
-
-            // Check if the input image file exists.
-            if (fs.existsSync(inputImagePath)) {
-              // Process the image if it is build, otherwise just use the original image inside the picture tag
-              if(configCommand === 'build' && !imgTag.hasAttribute('nosizes')) {
-              // Check if the image has already been processed
-                if (!processedImages.has(inputImagePath)) {
-                  // Add the input image path to the processed images Set
-                  processedImages.add(inputImagePath);
-
-                  // Get the dimensions of the original image
-                  const imageMetadata = await sharp(inputImagePath).metadata();
-                  const originalWidth = imageMetadata.width || 0;
-                  const originalHeight = imageMetadata.height || 0;
-
-                  // Copy the original image to the output directory
-                  const outputImageCopyPath = path.resolve(imgOutputDir, src);
-                  await fs.copy(inputImagePath, outputImageCopyPath);
-                  console.log(`Copied original image to: ${outputImageCopyPath}`);
-
-                  // Process the image (resize and convert to webp) for sizes smaller than the original
-                  const image = sharp(inputImagePath);
-                  // Create an array to store the `srcset` values
-                  const srcsetValues = [];
-                  const imagePromises = sizes.map(async (size) => {
-                    if (size <= originalWidth) {
-                      // Check if the output image is smaller than the size it is set to output
-                      if (image.metadata().width < size || image.metadata().height < size) {
-                        // No processing needed, return the original path
-                        return;
-                      }
-                      // Otherwise resize and output the webp format
-                      console.log(`Resizing image to ${size}px: ${inputImagePath}`);
-                      const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
-                      const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
-
-                      // Specify the output directory and file path
-                      const outputImagePath = path.resolve(imgOutputDir, webpFileName);
-
-                      // Ensure that parent directories are created if they don't exist.
-                      await fs.ensureDir(path.dirname(outputImagePath));
-
-                      await fs.outputFile(outputImagePath, webpBuffer);
-                      console.log(`Generated WebP image: ${outputImagePath}`);
-
-                      // Generate the relative href for the image to output to the HTML
-                      const outputImageSrc = path.relative(currentHTMLdir, outputImagePath);
-
-                      srcsetValues.push(`${outputImageSrc} ${size}w`);
-                      return `${outputImageSrc} ${size}w`;
-                    }
-                  });
-
-                  // Wait for all promises to resolve
-                  Promise.all(imagePromises).then((srcsetValues) => {
-                    // Filter out empty strings or placeholders
-                    srcsetValues = srcsetValues.filter((value) => value !== '');
-
-                    // Create the html element for <source> with each image reference in it
-                    const pictureSource = new HTMLElement('source', {});
-                    if(!imgTag.classList.contains('nolazy')) {
-                      pictureSource.setAttribute('data-srcset', srcsetValues.join(', '));
-                    } else {
-                      pictureSource.setAttribute('srcset', srcsetValues.join(', '));
-                    }
-                    pictureSource.setAttribute('type', 'image/webp');
-                    // Add the picture source elements to the img tag
-                    picture.insertAdjacentHTML('afterbegin',pictureSource);
-                  });
-
-                  imageProcessingPromises.push(...imagePromises);
-                } else {
-                  console.log(`Image already processed: ${inputImagePath}`);
+            // Process the image (resize and convert to webp) for sizes smaller than the original
+            const image = sharp(inputImagePath);
+            // Create an array to store the `srcset` values
+            const srcsetValues = [];
+            const imagePromises = sizes.map(async (size) => {
+              if (size <= originalWidth) {
+                // Check if the output image is smaller than the size it is set to output
+                if (image.metadata().width < size || image.metadata().height < size) {
+                  // No processing needed, return the original path
+                  return;
                 }
-              }
+                // Otherwise resize and output the webp format
+                console.log(`Resizing image to ${size}px: ${inputImagePath}`);
+                const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
+                const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
 
-            } else {
-              reject(new Error(`Input file is missing: ${inputImagePath}`));
-              return;
-            }
+                // Specify the output directory and file path
+                const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+
+                // Ensure that parent directories are created if they don't exist.
+                await fs.ensureDir(path.dirname(outputImagePath));
+
+                await fs.outputFile(outputImagePath, webpBuffer);
+                console.log(`Generated WebP image: ${outputImagePath}`);
+
+                // Generate the relative href for the image to output to the HTML
+                const outputImageSrc = path.relative(currentHTMLdir, outputImagePath);
+
+                srcsetValues.push(`${outputImageSrc} ${size}w`);
+                return `${outputImageSrc} ${size}w`;
+              }
+            });
+
+            // Wait for all promises to resolve
+            Promise.all(imagePromises).then((srcsetValues) => {
+              // Filter out empty strings or placeholders
+              srcsetValues = srcsetValues.filter((value) => value !== '');
+
+              // Create the html element for <source> with each image reference in it
+              const pictureSource = new HTMLElement('source', {});
+              if(!imgTag.classList.contains('nolazy')) {
+                pictureSource.setAttribute('data-srcset', srcsetValues.join(', '));
+              } else {
+                pictureSource.setAttribute('srcset', srcsetValues.join(', '));
+              }
+              pictureSource.setAttribute('type', 'image/webp');
+              // Add the picture source elements to the img tag
+              picture.insertAdjacentHTML('afterbegin',pictureSource);
+            });
+
+            imageProcessingPromises.push(...imagePromises);
+          } else {
+            console.log(`Image already processed: ${inputImagePath}`);
           }
+
         }
 
         // Wait for all image processing promises to complete
