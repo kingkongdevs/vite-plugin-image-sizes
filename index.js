@@ -20,13 +20,24 @@ module.exports = (options) => {
       config = resolvedConfig
     },
 
-    async transformIndexHtml(html, { path: indexPath, context }) {
+    async transformIndexHtml(html, { path: indexPath, context, filename }) {
       const imgOutputDir = options.outputDir || 'dist/assets/images'; //  Set the image output directory
+      const imgOutDir = 'assets/images';
       const imgInputDir = options.imgInputDir || 'src/assets/images'; // Set the image input directory
       const configCommand = config.command; // build or serve
-      const buildDir = config.build.outDir; // ./dist/ by default
+      const buildDir = config.build.outDir; // dist by default
       const sizes = options.sizes || [320, 640, 1024];
-      
+      const configRoot = config.root; // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/src
+      const currentFilePath = indexPath;  // ex. /free-ebook/index.html
+      const projectPath = process.cwd(); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin
+      const outputDir = config.build.outDir; // ex. ../dist/
+      const outputPath = path.join(configRoot, outputDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
+      const imgOutputPath = path.resolve(outputPath, imgOutDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist/
+      // Subtract the output directory path from the image output path to get the relative path
+      const webOutputPath = path.relative(outputPath, imgOutputPath); // ex. assets/images
+      // Get the directory path that the currently processed HTML file is in
+      const currentHTMLdir = path.dirname(path.join(outputPath, currentFilePath)); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
+
 
       return new Promise(async (resolve, reject) => {
 
@@ -52,20 +63,19 @@ module.exports = (options) => {
             // Add the original image as a child of the new picture tag
             picture.appendChild(imgTag);
 
+
+            // Output the src of the image when it gets output relative to the HTML file that is being processed
+            const currentIMGpath = path.join(imgOutputPath, src);
+            const outputImagePath = path.relative(currentHTMLdir, currentIMGpath);
+
             // Construct the full path to the input image based on /src/assets/images
             const inputImagePath = path.resolve(imgInputDir, src);
-            // Calculate the relative path from the HTML file to the new image in /dist/
-            const relativeImagePath = path.relative(path.dirname(indexPath), path.join('/', imgOutputDir, src));
-            // Remove the /dist/ folder from the relative path
-            const cleanRelativeImagePath = relativeImagePath.replace('dist/', ''); // TODO: replace this with something that doesn't assume your output folder is 'dist'
-
-            console.log('Updated image src:', cleanRelativeImagePath);
 
             // Update the src attribute of the <img> tag with the cleaned relative path
             if (!imgTag.classList.contains('nolazy')) {
-              imgTag.setAttribute('data-src', cleanRelativeImagePath);
+              imgTag.setAttribute('data-src', outputImagePath);
             } else {
-              imgTag.setAttribute('src', cleanRelativeImagePath);
+              imgTag.setAttribute('src', outputImagePath);
             }
 
             // If the ogImage does not have an alt attribute, add one
@@ -138,8 +148,11 @@ module.exports = (options) => {
                       await fs.outputFile(outputImagePath, webpBuffer);
                       console.log(`Generated WebP image: ${outputImagePath}`);
 
-                      srcsetValues.push(`${outputImagePath} ${size}w`);
-                      return `${outputImagePath} ${size}w`;
+                      // Generate the relative href for the image to output to the HTML
+                      const outputImageSrc = path.relative(currentHTMLdir, outputImagePath);
+
+                      srcsetValues.push(`${outputImageSrc} ${size}w`);
+                      return `${outputImageSrc} ${size}w`;
                     }
                   });
 
