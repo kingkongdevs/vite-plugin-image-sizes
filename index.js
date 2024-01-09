@@ -19,7 +19,6 @@ module.exports = (options) => {
 
     async transformIndexHtml(html, { path: indexPath, context, filename }) {
       const imgOutputDir = options.outputDir || 'dist/assets/images'; // Set the image output directory
-      const imgOutDir = 'assets/images';
       const imgInputDir = options.imgInputDir || 'src/assets/images'; // Set the image input directory
       const configCommand = config.command; // build or serve
       const buildDir = config.build.outDir; // dist by default
@@ -29,9 +28,7 @@ module.exports = (options) => {
       const projectPath = process.cwd(); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin
       const outputDir = config.build.outDir; // ex. ../dist/
       const outputPath = path.join(configRoot, outputDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
-      const imgOutputPath = path.resolve(outputPath, imgOutDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist/
-      // Subtract the output directory path from the image output path to get the relative path
-      const webOutputPath = path.relative(outputPath, imgOutputPath); // ex. assets/images
+      const imgOutputPath = path.resolve(projectPath, imgOutputDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist/
       // Get the directory path that the currently processed HTML file is in
       const currentHTMLdir = path.dirname(path.join(outputPath, currentFilePath)); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
 
@@ -101,9 +98,6 @@ module.exports = (options) => {
           }
 
 
-
-          console.log(`Processing image: ${inputImagePath}`);
-
           // Check if the input image file exists.
           if (!fs.existsSync(inputImagePath)) {
             reject(new Error(`Input file is missing: ${inputImagePath}`));
@@ -128,7 +122,6 @@ module.exports = (options) => {
             // Copy the original image to the output directory
             const outputImageCopyPath = path.resolve(imgOutputDir, src);
             await fs.copy(inputImagePath, outputImageCopyPath);
-            console.log(`Copied original image to: ${outputImageCopyPath}`);
 
             // Process the image (resize and convert to webp) for sizes smaller than the original
             const image = sharp(inputImagePath);
@@ -145,7 +138,6 @@ module.exports = (options) => {
                   return;
                 }
                 // Otherwise resize and output the webp format
-                console.log(`Resizing image to ${size}px: ${inputImagePath}`);
                 const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
                 const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
 
