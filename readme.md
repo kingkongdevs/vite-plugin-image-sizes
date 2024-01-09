@@ -10,17 +10,17 @@
 ***Lazyloading*** - Adds the lazyload class to all images.
 
 ## Usage
-Import `imagesPlugin` from `@kingkongdevs/vite-plugin-image-sizes`
+Import `viteImageSizes` from `@kingkongdevs/vite-plugin-image-sizes`
 
 ```
-import imagesPlugin from @kingkongdevs/vite-plugin-image-sizes'
+import viteImageSizes from @kingkongdevs/vite-plugin-image-sizes'
 ```
 
 
-Add the imagesPlugin to your `vite.config.js` file's plugins array:
+Add the viteImageSizes to your `vite.config.js` file's plugins array:
 ```
 plugins: [
-  imagesPlugin({
+  viteImageSizes({
     outputDir: 'dist/assets/images',
     imgInputDir: 'src/assets/images'
   }),
