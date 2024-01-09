@@ -5,7 +5,7 @@
 
 **Generates** - Takes the original image and generates resized versions for common breakpoints like mobile, tablet, desktop etc. Images are only generated on build, during development watch mode the original images are used contained within ```<picture>``` tags.
 
-**Renames with symantic HTML** - No need to write out file paths for your project, just use the image name and type, and this plugin will take care of the rest ```<img src="image-name.jpg">```. Also takes care of adding all srcset image references. If your image doens't have an ```alt``` attribute, it will add it, along with the natural image height and width. Falls back to the original image for browsers without ```<picture>``` and ```<source>``` tag support.
+**Renames with semantic HTML** - No need to write out file paths for your project, just use the image name and type, and this plugin will take care of the rest ```<img src="image-name.jpg">```. Also takes care of adding all srcset image references. If your image doens't have an ```alt``` attribute, it will add it, along with the natural image height and width. Falls back to the original image for browsers without ```<picture>``` and ```<source>``` tag support.
 
 ***Lazyloading*** - Adds the lazyload class to all images.
 
