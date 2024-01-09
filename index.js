@@ -105,7 +105,7 @@ module.exports = (options) => {
           }
 
           // Process the image if it is build, otherwise just use the original image inside the picture tag
-          if(!configCommand === 'build' || imgTag.hasAttribute('nosizes')) {
+          if(configCommand !== 'build' || imgTag.hasAttribute('nosizes')) {
             return
           }
           
