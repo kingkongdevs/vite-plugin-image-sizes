@@ -49,7 +49,7 @@ module.exports = (options) => {
           const src = imgTag.getAttribute('src');
           
           // Skip if it is not a jpg or png
-          if (!src || !/\.(jpg|png)$/.test(src)) {
+          if (!src || !/\.(jpg|png|jpeg)$/.test(src)) {
             return;
           }
 
