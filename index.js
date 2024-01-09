@@ -103,93 +103,92 @@ module.exports = (options) => {
             reject(new Error(`Input file is missing: ${inputImagePath}`));
             return;
           }
+          
 
           // Process the image if it is build, otherwise just use the original image inside the picture tag
-          if(configCommand !== 'build' || imgTag.hasAttribute('nosizes')) {
-            return
-          }
+          if (configCommand === 'build' && !imgTag.hasAttribute('nosizes')) {
           
-          // Check if the image has already been processed
-          if (!processedImages.has(inputImagePath)) {
-            // Add the input image path to the processed images Set
-            processedImages.set(inputImagePath, []);
+            // Check if the image has already been processed
+            if (!processedImages.has(inputImagePath)) {
+              // Add the input image path to the processed images Set
+              processedImages.set(inputImagePath, []);
 
-            // Get the dimensions of the original image
-            const imageMetadata = await sharp(inputImagePath).metadata();
-            const originalWidth = imageMetadata.width || 0;
-            const originalHeight = imageMetadata.height || 0;
+              // Get the dimensions of the original image
+              const imageMetadata = await sharp(inputImagePath).metadata();
+              const originalWidth = imageMetadata.width || 0;
+              const originalHeight = imageMetadata.height || 0;
 
-            // Copy the original image to the output directory
-            const outputImageCopyPath = path.resolve(imgOutputDir, src);
-            await fs.copy(inputImagePath, outputImageCopyPath);
+              // Copy the original image to the output directory
+              const outputImageCopyPath = path.resolve(imgOutputDir, src);
+              await fs.copy(inputImagePath, outputImageCopyPath);
 
-            // Process the image (resize and convert to webp) for sizes smaller than the original
-            const image = sharp(inputImagePath);
+              // Process the image (resize and convert to webp) for sizes smaller than the original
+              const image = sharp(inputImagePath);
 
-            // Add the current image size to the sizes to generate
-            let sizesToGenerate = [...sizes];
-            sizesToGenerate.push(originalWidth);
+              // Add the current image size to the sizes to generate
+              let sizesToGenerate = [...sizes];
+              sizesToGenerate.push(originalWidth);
 
-            const imagePromises = sizesToGenerate.map(async (size) => {
-              if (size <= originalWidth) {
-                // Check if the output image is smaller than the size it is set to output
-                if (image.metadata().width < size || image.metadata().height < size) {
-                  // No processing needed, return the original path
+              const imagePromises = sizesToGenerate.map(async (size) => {
+                if (size <= originalWidth) {
+                  // Check if the output image is smaller than the size it is set to output
+                  if (image.metadata().width < size || image.metadata().height < size) {
+                    // No processing needed, return the original path
+                    return;
+                  }
+                  // Otherwise resize and output the webp format
+                  const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
+                  const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
+
+                  // Specify the output directory and file path
+                  const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+
+                  // Ensure that parent directories are created if they don't exist.
+                  await fs.ensureDir(path.dirname(outputImagePath));
+
+                  await fs.outputFile(outputImagePath, webpBuffer);
+                  console.log(`Generated WebP image: ${outputImagePath}`);
+
+                  processedImages.get(inputImagePath).push({'src': webpFileName, 'size': size});
+
                   return;
                 }
-                // Otherwise resize and output the webp format
-                const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
-                const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
+              });
 
-                // Specify the output directory and file path
-                const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+              // Wait for all promises to resolve
+              Promise.all(imagePromises).then(() => {
+                generatePictureTags(inputImagePath);
+              });
 
-                // Ensure that parent directories are created if they don't exist.
-                await fs.ensureDir(path.dirname(outputImagePath));
-
-                await fs.outputFile(outputImagePath, webpBuffer);
-                console.log(`Generated WebP image: ${outputImagePath}`);
-
-                processedImages.get(inputImagePath).push({'src': webpFileName, 'size': size});
-
-                return;
-              }
-            });
-
-            // Wait for all promises to resolve
-            Promise.all(imagePromises).then(() => {
-              generatePictureTags(inputImagePath);
-            });
-
-            imageProcessingPromises.push(...imagePromises);
-          } else {
-            // Image already processed, just generate the HTML and insert it based on the stored image data
-            generatePictureTags(inputImagePath);
-          }
-
-
-
-
-          async function generatePictureTags(inputImagePath) {
-            // Function that takes the current html directory, the image filename, and the image output directory, and outputs the relative image url
-            let imgPath = (htmlDir, imgName, imgDir) => {
-              return path.relative(htmlDir, path.resolve(path.join(imgDir, imgName)));
-            }
-            let imgSizes = processedImages.get(inputImagePath);
-            let outputString = imgSizes.map(image => `${imgPath(currentHTMLdir, src, imgOutputDir)} ${image.size}w`).join(', ');
-
-            // Create the html element for <source> with each image reference in it
-            const pictureSource = new HTMLElement('source', {});
-            if(!imgTag.classList.contains('nolazy')) {
-              pictureSource.setAttribute('data-srcset', outputString);
+              imageProcessingPromises.push(...imagePromises);
             } else {
-              pictureSource.setAttribute('srcset', outputString);
+              // Image already processed, just generate the HTML and insert it based on the stored image data
+              generatePictureTags(inputImagePath);
             }
-            pictureSource.setAttribute('type', 'image/webp');
-            // Add the picture source elements to the img tag
-            picture.insertAdjacentHTML('afterbegin',pictureSource);
-          }
 
+
+
+
+            async function generatePictureTags(inputImagePath) {
+              // Function that takes the current html directory, the image filename, and the image output directory, and outputs the relative image url
+              let imgPath = (htmlDir, imgName, imgDir) => {
+                return path.relative(htmlDir, path.resolve(path.join(imgDir, imgName)));
+              }
+              let imgSizes = processedImages.get(inputImagePath);
+              let outputString = imgSizes.map(image => `${imgPath(currentHTMLdir, src, imgOutputDir)} ${image.size}w`).join(', ');
+
+              // Create the html element for <source> with each image reference in it
+              const pictureSource = new HTMLElement('source', {});
+              if(!imgTag.classList.contains('nolazy')) {
+                pictureSource.setAttribute('data-srcset', outputString);
+              } else {
+                pictureSource.setAttribute('srcset', outputString);
+              }
+              pictureSource.setAttribute('type', 'image/webp');
+              // Add the picture source elements to the img tag
+              picture.insertAdjacentHTML('afterbegin',pictureSource);
+            }
+          }
         }
 
         // Wait for all image processing promises to complete
