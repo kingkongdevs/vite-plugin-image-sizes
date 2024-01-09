@@ -5,11 +5,9 @@ const { parse, HTMLElement } = require('node-html-parser');
 // TODO: probably create a webp version of the original image for the largest size
 // TODO: do something with avif as well
 // TODO: add a global that stops lazyloading from being added
-// TODO: generate the source and srcset even if new images arent generated.
-// TODO: <source> elements should appear first in the <picture> with <img> fallback last.
 
 // Create a Set to store processed image paths
-const processedImages = new Set();
+const processedImages = new Map();
 
 module.exports = (options) => {
   return {
@@ -121,7 +119,7 @@ module.exports = (options) => {
           // Check if the image has already been processed
           if (!processedImages.has(inputImagePath)) {
             // Add the input image path to the processed images Set
-            processedImages.add(inputImagePath);
+            processedImages.set(inputImagePath, []);
 
             // Get the dimensions of the original image
             const imageMetadata = await sharp(inputImagePath).metadata();
@@ -135,8 +133,7 @@ module.exports = (options) => {
 
             // Process the image (resize and convert to webp) for sizes smaller than the original
             const image = sharp(inputImagePath);
-            // Create an array to store the `srcset` values
-            const srcsetValues = [];
+
             const imagePromises = sizes.map(async (size) => {
               if (size <= originalWidth) {
                 // Check if the output image is smaller than the size it is set to output
@@ -158,34 +155,44 @@ module.exports = (options) => {
                 await fs.outputFile(outputImagePath, webpBuffer);
                 console.log(`Generated WebP image: ${outputImagePath}`);
 
-                // Generate the relative href for the image to output to the HTML
-                const outputImageSrc = path.relative(currentHTMLdir, outputImagePath);
+                processedImages.get(inputImagePath).push({'src': webpFileName, 'size': size});
 
-                srcsetValues.push(`${outputImageSrc} ${size}w`);
-                return `${outputImageSrc} ${size}w`;
+                return;
               }
             });
 
             // Wait for all promises to resolve
-            Promise.all(imagePromises).then((srcsetValues) => {
-              // Filter out empty strings or placeholders
-              srcsetValues = srcsetValues.filter((value) => value !== '');
-
-              // Create the html element for <source> with each image reference in it
-              const pictureSource = new HTMLElement('source', {});
-              if(!imgTag.classList.contains('nolazy')) {
-                pictureSource.setAttribute('data-srcset', srcsetValues.join(', '));
-              } else {
-                pictureSource.setAttribute('srcset', srcsetValues.join(', '));
-              }
-              pictureSource.setAttribute('type', 'image/webp');
-              // Add the picture source elements to the img tag
-              picture.insertAdjacentHTML('afterbegin',pictureSource);
+            Promise.all(imagePromises).then(() => {
+              generatePictureTags(inputImagePath);
             });
 
             imageProcessingPromises.push(...imagePromises);
           } else {
-            console.log(`Image already processed: ${inputImagePath}`);
+            // Image already processed, just generate the HTML and insert it based on the stored image data
+            generatePictureTags(inputImagePath);
+          }
+
+
+
+
+          async function generatePictureTags(inputImagePath) {
+            // Function that takes the current html directory, the image filename, and the image output directory, and outputs the relative image url
+            let imgPath = (htmlDir, imgName, imgDir) => {
+              return path.relative(htmlDir, path.resolve(path.join(imgDir, imgName)));
+            }
+            let imgSizes = processedImages.get(inputImagePath);
+            let outputString = imgSizes.map(image => `${imgPath(currentHTMLdir, src, imgOutputDir)} ${image.size}w`).join(', ');
+
+            // Create the html element for <source> with each image reference in it
+            const pictureSource = new HTMLElement('source', {});
+            if(!imgTag.classList.contains('nolazy')) {
+              pictureSource.setAttribute('data-srcset', outputString);
+            } else {
+              pictureSource.setAttribute('srcset', outputString);
+            }
+            pictureSource.setAttribute('type', 'image/webp');
+            // Add the picture source elements to the img tag
+            picture.insertAdjacentHTML('afterbegin',pictureSource);
           }
 
         }
@@ -199,3 +206,4 @@ module.exports = (options) => {
     },
   };
 };
+
