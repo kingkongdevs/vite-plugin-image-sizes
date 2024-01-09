@@ -2,7 +2,6 @@ const path = require('path');
 const fs = require('fs-extra');
 const sharp = require('sharp');
 const { parse, HTMLElement } = require('node-html-parser');
-// TODO: probably create a webp version of the original image for the largest size
 // TODO: do something with avif as well
 // TODO: add a global that stops lazyloading from being added
 
@@ -134,7 +133,11 @@ module.exports = (options) => {
             // Process the image (resize and convert to webp) for sizes smaller than the original
             const image = sharp(inputImagePath);
 
-            const imagePromises = sizes.map(async (size) => {
+            // Add the current image size to the sizes to generate
+            let sizesToGenerate = [...sizes];
+            sizesToGenerate.push(originalWidth);
+
+            const imagePromises = sizesToGenerate.map(async (size) => {
               if (size <= originalWidth) {
                 // Check if the output image is smaller than the size it is set to output
                 if (image.metadata().width < size || image.metadata().height < size) {
