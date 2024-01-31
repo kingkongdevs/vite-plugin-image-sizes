@@ -106,61 +106,67 @@ module.exports = (options) => {
           
 
           // Process the image if it is build, otherwise just use the original image inside the picture tag
-          if (configCommand === 'build' && !imgTag.hasAttribute('nosizes')) {
+          if (configCommand === 'build') {
           
             // Check if the image has already been processed
             if (!processedImages.has(inputImagePath)) {
+              
               // Add the input image path to the processed images Set
               processedImages.set(inputImagePath, []);
-
-              // Get the dimensions of the original image
-              const imageMetadata = await sharp(inputImagePath).metadata();
-              const originalWidth = imageMetadata.width || 0;
-              const originalHeight = imageMetadata.height || 0;
-
+              
               // Copy the original image to the output directory
               const outputImageCopyPath = path.resolve(imgOutputDir, src);
               await fs.copy(inputImagePath, outputImageCopyPath);
 
-              // Process the image (resize and convert to webp) for sizes smaller than the original
-              const image = sharp(inputImagePath);
+              // If the image is flagged as no sizes, don't generate the other sizes
+              if(!imgTag.hasAttribute('nosizes')) {
 
-              // Add the current image size to the sizes to generate
-              let sizesToGenerate = [...sizes];
-              sizesToGenerate.push(originalWidth);
-
-              const imagePromises = sizesToGenerate.map(async (size) => {
-                if (size <= originalWidth) {
-                  // Check if the output image is smaller than the size it is set to output
-                  if (image.metadata().width < size || image.metadata().height < size) {
-                    // No processing needed, return the original path
+                // Get the dimensions of the original image
+                const imageMetadata = await sharp(inputImagePath).metadata();
+                const originalWidth = imageMetadata.width || 0;
+                const originalHeight = imageMetadata.height || 0;
+  
+  
+                // Process the image (resize and convert to webp) for sizes smaller than the original
+                const image = sharp(inputImagePath);
+  
+                // Add the current image size to the sizes to generate
+                let sizesToGenerate = [...sizes];
+                sizesToGenerate.push(originalWidth);
+  
+                const imagePromises = sizesToGenerate.map(async (size) => {
+                  if (size <= originalWidth) {
+                    // Check if the output image is smaller than the size it is set to output
+                    if (image.metadata().width < size || image.metadata().height < size) {
+                      // No processing needed, return the original path
+                      return;
+                    }
+                    // Otherwise resize and output the webp format
+                    const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
+                    const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
+  
+                    // Specify the output directory and file path
+                    const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+  
+                    // Ensure that parent directories are created if they don't exist.
+                    await fs.ensureDir(path.dirname(outputImagePath));
+  
+                    await fs.outputFile(outputImagePath, webpBuffer);
+                    console.log(`Generated WebP image: ${outputImagePath}`);
+  
+                    processedImages.get(inputImagePath).push({'src': webpFileName, 'size': size});
+  
                     return;
                   }
-                  // Otherwise resize and output the webp format
-                  const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
-                  const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
-
-                  // Specify the output directory and file path
-                  const outputImagePath = path.resolve(imgOutputDir, webpFileName);
-
-                  // Ensure that parent directories are created if they don't exist.
-                  await fs.ensureDir(path.dirname(outputImagePath));
-
-                  await fs.outputFile(outputImagePath, webpBuffer);
-                  console.log(`Generated WebP image: ${outputImagePath}`);
-
-                  processedImages.get(inputImagePath).push({'src': webpFileName, 'size': size});
-
-                  return;
-                }
-              });
-
-              // Wait for all promises to resolve
-              Promise.all(imagePromises).then(() => {
-                generatePictureTags(inputImagePath);
-              });
-
-              imageProcessingPromises.push(...imagePromises);
+                });
+  
+                // Wait for all promises to resolve
+                Promise.all(imagePromises).then(() => {
+                  generatePictureTags(inputImagePath);
+                });
+  
+                imageProcessingPromises.push(...imagePromises);
+              }
             } else {
               // Image already processed, just generate the HTML and insert it based on the stored image data
               generatePictureTags(inputImagePath);
