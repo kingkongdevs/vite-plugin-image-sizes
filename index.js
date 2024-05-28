@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const sharp = require('sharp');
 const { parse, HTMLElement } = require('node-html-parser');
+const { normalizePath } = require('vite');
 // TODO: do something with avif as well
 // TODO: add a global that stops lazyloading from being added
 
@@ -14,7 +15,7 @@ module.exports = (options) => {
 
     configResolved(resolvedConfig) {
       // store the resolved config
-      config = resolvedConfig
+      config = resolvedConfig;
     },
 
     async transformIndexHtml(html, { path: indexPath, context, filename }) {
@@ -28,13 +29,12 @@ module.exports = (options) => {
       const projectPath = process.cwd(); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin
       const outputDir = config.build.outDir; // ex. ../dist/
       const outputPath = path.join(configRoot, outputDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
-      const imgOutputPath = path.resolve(projectPath, imgOutputDir); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist/
+      const imgOutputPath = normalizePath(path.resolve(projectPath, imgOutputDir)); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist/
       // Get the directory path that the currently processed HTML file is in
-      const currentHTMLdir = path.dirname(path.join(outputPath, currentFilePath)); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
+      const currentHTMLdir = normalizePath(path.dirname(path.join(outputPath, currentFilePath))); // ex. /Users/myuser/Documents/boilerplate-vite-image-plugin/dist
 
 
       return new Promise(async (resolve, reject) => {
-
         // Parse the HTML content.
         const root = parse(html);
 
@@ -60,13 +60,12 @@ module.exports = (options) => {
           // Add the original image as a child of the new picture tag
           picture.appendChild(imgTag);
 
-
           // Output the src of the image when it gets output relative to the HTML file that is being processed
-          const currentIMGpath = path.join(imgOutputPath, src);
-          const outputImagePath = path.relative(currentHTMLdir, currentIMGpath);
+          const currentIMGpath = normalizePath(path.join(imgOutputPath, src));
+          const outputImagePath = normalizePath(path.relative(currentHTMLdir, currentIMGpath));
 
           // Construct the full path to the input image based on /src/assets/images
-          const inputImagePath = path.resolve(imgInputDir, src);
+          const inputImagePath = normalizePath(path.resolve(imgInputDir, src));
 
           // Update the src attribute of the <img> tag with the cleaned relative path
           if (!imgTag.classList.contains('nolazy')) {
@@ -110,12 +109,12 @@ module.exports = (options) => {
           
             // Check if the image has already been processed
             if (!processedImages.has(inputImagePath)) {
-              
+
               // Add the input image path to the processed images Set
               processedImages.set(inputImagePath, []);
               
               // Copy the original image to the output directory
-              const outputImageCopyPath = path.resolve(imgOutputDir, src);
+              const outputImageCopyPath = normalizePath(path.resolve(imgOutputDir, src));
               await fs.copy(inputImagePath, outputImageCopyPath);
 
               // If the image is flagged as no sizes, don't generate the other sizes
@@ -143,10 +142,10 @@ module.exports = (options) => {
                     }
                     // Otherwise resize and output the webp format
                     const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
-                    const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
+                    const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp}`;
   
                     // Specify the output directory and file path
-                    const outputImagePath = path.resolve(imgOutputDir, webpFileName);
+                    const outputImagePath = normalizePath(path.resolve(imgOutputDir, webpFileName));
   
                     // Ensure that parent directories are created if they don't exist.
                     await fs.ensureDir(path.dirname(outputImagePath));
@@ -178,7 +177,7 @@ module.exports = (options) => {
             async function generatePictureTags(inputImagePath) {
               // Function that takes the current html directory, the image filename, and the image output directory, and outputs the relative image url
               let imgPath = (htmlDir, imgName, imgDir) => {
-                return path.relative(htmlDir, path.resolve(path.join(imgDir, imgName)));
+                return normalizePath(path.relative(htmlDir, path.resolve(path.join(imgDir, imgName))));
               }
               let imgSizes = processedImages.get(inputImagePath);
               let outputString = imgSizes.map(image => `${imgPath(currentHTMLdir, src, imgOutputDir)} ${image.size}w`).join(', ');
@@ -206,4 +205,3 @@ module.exports = (options) => {
     },
   };
 };
-
