@@ -142,7 +142,7 @@ module.exports = (options) => {
                     }
                     // Otherwise resize and output the webp format
                     const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
-                    const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp}`;
+                    const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
   
                     // Specify the output directory and file path
                     const outputImagePath = normalizePath(path.resolve(imgOutputDir, webpFileName));
