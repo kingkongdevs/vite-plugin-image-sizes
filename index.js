@@ -3,8 +3,6 @@ const fs = require('fs-extra');
 const sharp = require('sharp');
 const { parse, HTMLElement } = require('node-html-parser');
 const { normalizePath } = require('vite');
-// TODO: do something with avif as well
-// TODO: add a global that stops lazyloading from being added
 
 // Create a Set to store processed image paths
 const processedImages = new Map();
@@ -48,17 +46,6 @@ module.exports = (options) => {
         for (const imgTag of imgTags) {
           const src = imgTag.getAttribute('src');
           
-          // Skip if it is not a jpg or png
-          if (!src || !/\.(jpg|png|jpeg)$/.test(src)) {
-            return;
-          }
-
-          // First generate the picture element and rename the file
-          const picture = new HTMLElement('picture',{});
-          imgTag.replaceWith(picture);
-
-          // Add the original image as a child of the new picture tag
-          picture.appendChild(imgTag);
 
           // Output the src of the image when it gets output relative to the HTML file that is being processed
           const currentIMGpath = normalizePath(path.join(imgOutputPath, src));
@@ -74,6 +61,37 @@ module.exports = (options) => {
             imgTag.setAttribute('src', outputImagePath);
           }
 
+
+          // If the image tag has the 'nolazy' class, remove src and add lazyload class
+          if (!imgTag.classList.contains('nolazy')) {
+            const existingClass = [imgTag.getAttribute('class')];
+            existingClass.push('lazyload');
+            imgTag.setAttribute('class', existingClass.join(' '));
+            imgTag.removeAttribute('src');
+          }
+
+          // Skip if it is not a jpg, jpeg, or png
+          if (!src || !/\.(jpg|png|jpeg)$/.test(src)) {
+            // Still copy the file if it exists, and is build, and the image has not already been moved
+            if (fs.existsSync(inputImagePath) && configCommand === 'build' && !processedImages.has(inputImagePath)) {
+              // Add the input image path to the processed images Set
+              processedImages.set(inputImagePath, []);
+
+              // Copy the original image to the output directory
+              const outputImageCopyPath = normalizePath(path.resolve(imgOutputDir, src));
+              await fs.copy(inputImagePath, outputImageCopyPath);
+            }
+            continue; // Skip to the next image if the current one is not a supported format
+          }
+
+          // First generate the picture element and rename the file
+          const picture = new HTMLElement('picture', {});
+          imgTag.replaceWith(picture);
+
+          // Add the original image as a child of the new picture tag
+          picture.appendChild(imgTag);
+
+
           // If the ogImage does not have an alt attribute, add one
           if (!imgTag.getAttribute('alt')) {
             imgTag.setAttribute('alt', '');
@@ -88,13 +106,6 @@ module.exports = (options) => {
           imgTag.setAttribute('width', originalWidth);
           imgTag.setAttribute('height', originalHeight);
 
-          // If the image tag has the 'nolazy' class, remove src and add lazyload class
-          if (!imgTag.classList.contains('nolazy')) {
-            const existingClass = [imgTag.getAttribute('class')];
-            existingClass.push('lazyload');
-            imgTag.setAttribute('class', existingClass.join(' '));
-            imgTag.removeAttribute('src');
-          }
 
 
           // Check if the input image file exists.
@@ -170,9 +181,6 @@ module.exports = (options) => {
               // Image already processed, just generate the HTML and insert it based on the stored image data
               generatePictureTags(inputImagePath);
             }
-
-
-
 
             async function generatePictureTags(inputImagePath) {
               // Function that takes the current html directory, the image filename, and the image output directory, and outputs the relative image url
