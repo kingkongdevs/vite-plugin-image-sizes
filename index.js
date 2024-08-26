@@ -135,12 +135,7 @@ module.exports = (options) => {
 
                     const imagePromises = sizesToGenerate.map(async (size) => {
                       if (size <= originalWidth) {
-                        // Check if the output image is smaller than the size it is set to output
-                        if (image.metadata().width < size || image.metadata().height < size) {
-                          // No processing needed, return the original path
-                          return;
-                        }
-                        // Otherwise resize and output the webp format
+                        // Resize and convert to .webp regardless of the original format
                         const webpBuffer = await image.clone().resize(size).toFormat('webp').toBuffer();
                         const webpFileName = `${path.basename(src, path.extname(src))}-${size}px.webp`;
 
@@ -160,11 +155,10 @@ module.exports = (options) => {
                     });
 
                     // Wait for all promises to resolve
-                    Promise.all(imagePromises).then(() => {
-                      generatePictureTags(inputImagePath);
-                    });
+                    await Promise.all(imagePromises);
 
-                    imageProcessingPromises.push(...imagePromises);
+                    // Now generate the picture tags based on processed images
+                    generatePictureTags(inputImagePath);
                   }
                 } else {
                   // Image already processed, just generate the HTML and insert it based on the stored image data
@@ -177,7 +171,17 @@ module.exports = (options) => {
                     return normalizePath(path.relative(htmlDir, path.resolve(imgDir, imgName)));
                   }
                   let imgSizes = processedImages.get(inputImagePath);
-                  let outputString = imgSizes.map(image => `${imgPath(currentHTMLdir, image.src, imgOutputDir)} ${image.size}w`).join(', ');
+                  
+                  if (!imgSizes) {
+                    console.error(`No processed images found for ${inputImagePath}`);
+                    return;
+                  }
+
+                  let outputString = imgSizes.map(image => {
+                    const srcSet = `${imgPath(currentHTMLdir, image.src, imgOutputDir)} ${image.size}w`;
+                    console.log(`Adding to srcset: ${srcSet}`);
+                    return srcSet;
+                  }).join(', ');
 
                   // Create the html element for <source> with each image reference in it
                   const pictureSource = new HTMLElement('source', {});
@@ -187,6 +191,7 @@ module.exports = (options) => {
                     pictureSource.setAttribute('srcset', outputString);
                   }
                   pictureSource.setAttribute('type', 'image/webp');
+
                   // Add the picture source elements to the img tag
                   picture.insertAdjacentHTML('afterbegin', pictureSource);
                 }
