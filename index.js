@@ -57,14 +57,14 @@ module.exports = (options) => {
                             const inputImagePath = normalizePath(path.posix.resolve(imgInputDir, src));
 
                             // Update the src attribute of the <img> tag with the cleaned relative path
-                            if (!imgTag.classList.contains('nolazy')) {
+                            if (!imgTag.classList.contains('nolazy') && !imgTag.hasAttribute('nolazy')) {
                                 imgTag.setAttribute('data-src', outputImagePath);
                             } else {
                                 imgTag.setAttribute('src', outputImagePath);
                             }
 
                             // If the image tag has the 'nolazy' class, remove src and add lazyload class
-                            if (!imgTag.classList.contains('nolazy')) {
+                            if (!imgTag.classList.contains('nolazy') && !imgTag.hasAttribute('nolazy')) {
                                 const existingClass = [imgTag.getAttribute('class')];
                                 existingClass.push('lazyload');
                                 imgTag.setAttribute('class', existingClass.join(' '));
