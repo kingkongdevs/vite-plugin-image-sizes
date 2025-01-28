@@ -41,6 +41,27 @@ module.exports = (options) => {
                     // Create an array to store image processing promises
                     const imageProcessingPromises = [];
 
+                    // Copy OG img to dist folder
+                    const ogMetaTag = root.querySelector('meta[property="og:image"]');
+                    
+                    if (ogMetaTag && ogMetaTag.hasAttribute('content')) {
+                        const ogImageSrc = ogMetaTag.getAttribute('content');
+                        const ogInputImagePath = normalizePath(path.posix.resolve(imgInputDir, ogImageSrc));
+                        const ogOutputImagePath = normalizePath(path.posix.resolve(imgOutputDir, path.basename(ogImageSrc)));
+                    
+                        // Ensure the file exists and copy it to the output directory
+                        if (fs.existsSync(ogInputImagePath) && configCommand === 'build') {
+                            try {
+                                await fs.copy(ogInputImagePath, ogOutputImagePath);
+                                console.log(`Copied og:image to output directory: ${ogOutputImagePath}`);
+                            } catch (error) {
+                                console.error(`Error copying og:image: ${error.message}`);
+                            }
+                        } else {
+                            console.warn(`og:image file not found or not in build mode: ${ogInputImagePath}`);
+                        }
+                    }
+
                     // Process each <img> tag.
                     for (const imgTag of imgTags) {
                         try {
