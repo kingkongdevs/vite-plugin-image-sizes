@@ -1,6 +1,6 @@
 {
   "name": "@kingkongdevs/vite-plugin-image-sizes",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Plugin for Vite that compresses and generates alternate sizes for images, and rewrites HTML with the corresponding <picture> tags.",
   "main": "index.js",
   "scripts": {
