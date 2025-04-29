@@ -27,6 +27,7 @@ This Vite plugin enhances your images by:
 
 4. **Performance Optimization**
    - Adds `loading="lazy"` to all images for better page load performance
+   - Respects `loading="eager"` if explicitly set. Use this sparingly (ie. images above the fold)
    - Generates appropriate `srcset` values for responsive images
 
 ## Installation
@@ -144,6 +145,7 @@ Output:
 - All images are converted to WebP format for better performance
 - Missing `alt` attributes are automatically added
 - Natural image dimensions are automatically set
+- `loading="lazy"` is added by default, but `loading="eager"` will be respected if set
 
 ## Advanced Usage
 
