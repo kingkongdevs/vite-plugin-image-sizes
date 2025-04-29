@@ -222,10 +222,9 @@ module.exports = (options) => {
                     .join(", ");
 
                   // Create the html element for <source> with each image reference in it
-                  const pictureSource = new HTMLElement("source", {
-                    srcset: outputString,
-                    type: "image/webp",
-                  });
+                  const pictureSource = new HTMLElement("source", {});
+                  pictureSource.setAttribute("srcset", outputString);
+                  pictureSource.setAttribute("type", "image/webp");
 
                   // Add the picture source elements to the img tag
                   picture.insertAdjacentHTML("afterbegin", pictureSource);
